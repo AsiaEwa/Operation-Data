@@ -1,0 +1,82 @@
+import pandas as pd
+import re
+
+class DataProcessor:
+
+    def __init__(self):
+        self.jf = None
+    #csv
+     
+    def read_data(self):
+        df1 = pd.read_csv('users_1.csv', delimiter=';')  #df dataframe df temp
+        df2 = pd.read_csv('users_2.csv', delimiter=';')
+        df = df1._append(df2, ignore_index=True) 
+
+        # XML 
+        ef1 = pd.read_xml('users_1.xml')
+        ef2 = pd.read_xml('users_2.xml')    
+        ef = ef1._append(ef2, ignore_index=True) 
+
+        gf = df._append(ef, ignore_index=True) 
+
+        #json
+        hf = pd.read_json('users.json')   
+        self.jf = gf._append(hf, ignore_index=True) # FULL DATA TO VALIDATION
+        # print(jf.to_string())
+
+    # VALIDATION
+   
+    def emailValid(email):
+        regex = re.compile(r'^\w{1,}@\w{1,}.\w{1,4}$')
+        if re.fullmatch(regex, email):
+            return True
+        else :
+            return False
+
+    def process_data(self):   
+        for index, row in self.jf.iterrows():
+            #print(row['firstname'], row['telephone_number'], row['email'],row['password'], row['role'],row['created_at'], row['children']) - ALL INFO 
+        
+        # VALIDATION TELEPHONE NUMBER
+            if isinstance(row['telephone_number'], str) == False : # whether the phone number is not a string  
+                self.jf.drop([index], inplace = True) # jf removal - "delate" ; an object of the data frame class
+            else : 
+                new_telephone_number = ""
+                for i in reversed(range(0, len(row['telephone_number']))): 
+                    character = row['telephone_number'][i]                     #character - "symbol" - variable 
+                    if character.isnumeric() :
+                        new_telephone_number = character + new_telephone_number #value assignment
+                    if len(new_telephone_number) == 9 :
+                        break   
+                self.jf['telephone_number'][index] = new_telephone_number
+
+            # EMAIL VALIDATION
+
+            if isinstance(row['email'], str) == False :
+                self.jf.drop([index], inplace = True)
+            else :
+                if self.emailValid(row['email']) == False :
+                    self.jf.drop([index], inplace = True) # modification of the inplace array
+
+            if isinstance(row['children'], str) == True :
+                children = []
+                children_strings = row['children'].split(",")
+                for child_string in children_strings :
+                    name_age_array = child_string.split(" ")
+                    name = name_age_array [0]
+                    age = name_age_array [1].replace("(", "").replace(")", "") # removal, deletion this symbol"()"
+                    child = {'name': name, 'age': int(age)} # creates a numeric type from strig -int
+                    children.append(child)
+                self.jf['children'][index] = children
+            
+            if isinstance(row['created_at'], str) == True :
+                created_at = row["created_at"]
+                self.jf['created_at'][index] = pd.Timestamp(created_at)
+                
+        #print(jf.to_string())
+        self.jf.sort_values(by=['created_at'], ascending=True, inplace=True)   # sorting accounts by date
+        
+        self.jf.drop_duplicates(subset=['telephone_number', 'email'], keep='last', inplace=True)
+
+        self.jf.reset_index(inplace=True, drop=True)
+        #print(jf.to_string())
