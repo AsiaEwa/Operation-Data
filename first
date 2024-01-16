@@ -1,0 +1,160 @@
+# NO OOP (eg."classes"; OOP in file 1234)
+import pandas as pd
+import json 
+import numpy as np
+import time
+import datetime
+import csv
+import argparse
+import re
+import math
+from datetime import datetime as DT
+
+#preparing the files to do tasks
+
+parser = argparse.ArgumentParser(
+                    prog='contacts',
+                    description='What the program does',
+                    epilog='Text at the bottom of help')
+
+parser.add_argument('task')           # positional argument
+parser.add_argument('-l', '--login')      # option that takes a value
+parser.add_argument('-p', '--password')
+
+args = parser.parse_args()
+print(args.task, args.login, args.password)
+
+#csv
+
+df1 = pd.read_csv('users_1.csv', delimiter=';')  #df dataframe df temp
+df2 = pd.read_csv('users_2.csv', delimiter=';')
+df = df1._append(df2, ignore_index=True) 
+
+# XML 
+ef1 = pd.read_xml('users_1.xml')
+ef2 = pd.read_xml('users_2.xml')    
+ef = ef1._append(ef2, ignore_index=True) 
+
+gf = df._append(ef, ignore_index=True) 
+
+#json
+
+hf = pd.read_json('users.json')   
+jf = gf._append(hf, ignore_index=True) # FULL DATA TO VALIDATION
+#print(jf.to_string())
+
+# VALIDATION
+regex = re.compile(r'^\w{1,}@\w{1,}.\w{1,4}$')
+def emailValid(email):
+    if re.fullmatch(regex, email):
+        return True
+    else :
+        return False
+    
+for index, row in jf.iterrows():
+    #print(row['firstname'], row['telephone_number'], row['email'],row['password'], row['role'],row['created_at'], row['children']) - ALL INFO 
+   
+   # VALIDATION TELEPHONE NUMBER
+    if isinstance(row['telephone_number'], str) == False : # whether the phone number is not a string  
+        jf.drop([index], inplace = True) # jf removal - "delate" ; an object of the data frame class
+    else : 
+        new_telephone_number = ""
+        for i in reversed(range(0, len(row['telephone_number']))): 
+            character = row['telephone_number'][i]                     #character - "symbol" - variable 
+            if character.isnumeric() :
+                new_telephone_number = character + new_telephone_number #value assignment
+            if len(new_telephone_number) == 9 :
+                break   
+        jf['telephone_number'][index] = new_telephone_number
+
+    # EMAIL VALIDATION
+
+    if isinstance(row['email'], str) == False :
+         jf.drop([index], inplace = True)
+    else :
+        if emailValid(row['email']) == False :
+             jf.drop([index], inplace = True) # modification of the inplace array
+
+    if isinstance(row['children'], str) == True :
+        children = []
+        children_strings = row['children'].split(",")
+        for child_string in children_strings :
+            name_age_array = child_string.split(" ")
+            name = name_age_array [0]
+            age = name_age_array [1].replace("(", "").replace(")", "") # removal, deletion this symbol"()"
+            child = {'name': name, 'age': int(age)} # creates a numeric type from strig -int
+            children.append(child)
+        jf['children'][index] = children
+    
+    if isinstance(row['created_at'], str) == True :
+        created_at = row["created_at"]
+        jf['created_at'][index] = pd.Timestamp(created_at)
+        
+#print(jf.to_string())
+jf.sort_values(by=['created_at'], ascending=True, inplace=True)   # sorting accounts by date
+   
+jf.drop_duplicates(subset=['telephone_number', 'email'], keep='last', inplace=True)
+
+jf.reset_index(inplace=True, drop=True)
+#print(jf.to_string())
+
+user = None # checking user login
+for index, row in jf.iterrows():
+    if row['email'] == args.login or row['telephone_number'] == args.login :
+        if row['password'] == args.password :
+            user = row
+            break
+
+# checking if the user exists
+if user is None :
+    print('Invalid Login')
+    exit()
+
+# Task 1 printing all valid accounts
+if args.task == 'print-all-accounts' :
+    print('print-all-accounts')
+    if user['role'] == 'admin' :
+        number_users = jf.shape[0] # returns the number of rows -info first element
+        print(number_users)
+    else :
+        print('Invalid Login')
+        exit()
+
+# Task 2 longest existing account
+
+if args.task == 'print-oldest-account' :
+    print('print-oldest-accounts')
+    if user['role'] == 'admin' :
+        oldest_user = jf.iloc[0] # returns the first row of the data frame object
+        print(oldest_user)
+    else :
+        print('Invalid Login')
+        exit()
+
+# Task 3 grouping children by age
+
+if args.task == 'group-by-age' :
+    print('group-by-age')
+    if user['role'] == 'admin' :
+        counts = {}
+        for index, row in jf.iterrows():
+            if isinstance(row['children'], list):
+                for child in row['children']:
+                    counts[str(child['age'])] = counts.get(str(child['age']), 0) + 1
+        countsList = list(counts.items())
+        countsList.sort(key=lambda count: count[1]) 
+        for key, value in countsList:
+            print ("age:", key, "count:", value)
+    else :
+        print('Invalid Login')
+        exit()
+
+# Task 4 printing children
+
+if args.task == 'print-children' :
+    children_str = []
+    for child in user['children'] :
+        child_string = child['name']+','+ str(child['age'])
+        children_str.append(child_string)
+    children_str.sort()       # sorting
+    print(children_str)
