@@ -1,0 +1,12 @@
+class UserAuthentication:
+    def __init__(self, data_processor):
+       self.data_processor = data_processor
+       self.user = None # checking user login
+
+    def authenticate_user(self, login, password):
+        for index, row in self.data_processor.jf.iterrows():
+            if row['email'] == login or row['telephone_number'] == login :
+                if row['password'] == password :
+                    self.user = row
+                    return True
+        return False
