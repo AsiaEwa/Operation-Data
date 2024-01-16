@@ -1,0 +1,34 @@
+import argparse
+from DataProcessor import DataProcessor
+from UserAuthentication import UserAuthentication
+from TaskHandler import TaskHandler
+
+#preparing the files to do tasks
+
+def main():
+    parser = argparse.ArgumentParser(
+                        prog='contacts',
+                        description='What the program does',
+                        epilog='Text at the bottom of help')
+
+    parser.add_argument('task')           # positional argument
+    parser.add_argument('-l', '--login')      # option that takes a value
+    parser.add_argument('-p', '--password')
+
+    args = parser.parse_args()
+
+    data_processor = DataProcessor()
+    data_processor.read_data()
+   
+    user_authentication = UserAuthentication(data_processor)
+
+    task_handler = TaskHandler(data_processor, user_authentication)
+
+    print(args)
+
+    task_handler.execute_task(args.task, args.login, args.password)
+
+
+main()
+
+  
