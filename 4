@@ -1,0 +1,99 @@
+class TaskHandler():
+    def __init__(self, data_processor, user_authentication):
+        self.data_processor = data_processor
+        self.user_authentication = user_authentication
+
+    def execute_task(self, task,login, password):
+         
+         if not self.user_authentication.authenticate_user(login,password):
+              print('Invalid login')
+              return
+
+         if task == 'print-all-account':
+              self.print_all_account()
+         elif task == 'print-oldest-account':
+              self.print_oldest_accounts()
+         elif task == 'group-by-age':
+              self.group_by_age()
+         elif task == 'print-children':
+              self.print_children()
+         elif task == 'find-similiar-children-by-age':
+              self.find_similiar_children_by_age()
+         else:
+              print('Invalid task')
+
+
+    # GENEROWANE W CHAT GPT
+    def find_similiar_children_by_age(self):
+        user = self.user_authentication.user
+        if user['role'] == 'admin':
+
+            similar_users = {}
+
+            for index, row in self.data_processor.jf.iterrows():
+                if (
+                    row['telephone_number'] != user['telephone_number']
+                    and row['email'] != user['email']
+                    and isinstance(row['children'], list)
+                ):
+                    for child in row['children']:
+                        for user_child in user['children']:
+                            if child['age'] == user_child['age']:
+                                similar_users[index] = row
+                                break
+                        if index in similar_users:
+                            break
+
+            if not similar_users:
+                print('No users found with at least one child of the same age.')
+            else:
+                for index, row in similar_users.items():
+                    print(f"User {index}: {row['firstname']}")
+                    print("Children:")
+                    for child in row['children']:
+                        print(f"  {child['name']}, {child['age']} years old")
+
+        else:
+            print('Invalid Login') 
+
+    
+
+    def print_all_account(self):
+        # Task 1 printing all valid accounts
+        if self.user_authentication.user['role'] == 'admin' :
+                number_users = self.data_processor.jf.shape[0] # returns the number of rows -info first element
+                print(number_users)
+        else :
+                print('Invalid Login')
+                return
+
+    def print_oldest_accounts(self):
+         if self.user_authentication.user['role'] == 'admin' :
+            oldest_user = self.data_processor.jf.iloc[0] # returns the first row of the data frame object
+            print(oldest_user)
+         else :
+            print('Invalid Login')
+            return
+
+    def group_by_age(self):
+        if self.user_authentication.user['role'] == 'admin' :
+            counts = {}
+            for index, row in self.data_processor.jf.iterrows():
+                if isinstance(row['children'], list):
+                    for child in row['children']:
+                        counts[str(child['age'])] = counts.get(str(child['age']), 0) + 1
+            countsList = list(counts.items())
+            countsList.sort(key=lambda count: count[1]) 
+            for key, value in countsList:
+                print ("age:", key, "count:", value)
+        else :
+            print('Invalid Login')
+            return
+    
+    def print_children(self):
+            children_str = []
+            for child in self.user_authentication.user['children'] :
+                child_string = child['name']+','+ str(child['age'])
+                children_str.append(child_string)
+            children_str.sort()     
+            print(children_str)
